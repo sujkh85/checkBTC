@@ -69,6 +69,17 @@ const maSettings = {
 // 이전 추세 점수를 저장할 변수
 let previousWeightedTrends = null;
 
+// 예측 기록을 저장할 배열
+let predictionHistory = [];
+
+// 누적 정확도 통계
+let accuracyStats = {
+    total: 0,
+    correct: 0,
+    incorrect: 0,
+    accuracy: 0
+};
+
 // 가격 데이터를 가져오는 함수
 async function getPriceData(timeFrame) {
     try {
@@ -266,6 +277,78 @@ function determineTrend(indicators) {
         .sort((a, b) => b[1] - a[1])[0][0];
 }
 
+// 예측 정확도 분석 함수
+async function analyzePredictionAccuracy() {
+    try {
+        // 5분봉 데이터 가져오기
+        const fiveMinData = await getPriceData({ name: '5분봉', interval: '5m', limit: 3 });
+        if (!fiveMinData || fiveMinData.length < 3) return;
+
+        const currentPrice = fiveMinData[fiveMinData.length - 1].close;
+        const tenMinutesAgoPrice = fiveMinData[0].close;
+        
+        // 가격 변동률 계산
+        const priceChange = ((currentPrice - tenMinutesAgoPrice) / tenMinutesAgoPrice) * 100;
+        
+        // 실제 추세 판단
+        let actualTrend;
+        if (priceChange > 0.5) {
+            actualTrend = '상승';
+        } else if (priceChange < -0.5) {
+            actualTrend = '하락';
+        } else {
+            actualTrend = '횡보';
+        }
+
+        // 예측 기록이 있으면 정확도 분석
+        if (predictionHistory.length > 0) {
+            const latestPrediction = predictionHistory[predictionHistory.length - 1];
+            const isCorrect = latestPrediction.predictedTrend === actualTrend;
+            
+            // 누적 통계 업데이트
+            accuracyStats.total++;
+            if (isCorrect) {
+                accuracyStats.correct++;
+            } else {
+                accuracyStats.incorrect++;
+            }
+            accuracyStats.accuracy = (accuracyStats.correct / accuracyStats.total * 100).toFixed(2);
+            
+            // 정확도 메시지 생성
+            let accuracyMessage = `\n*예측 정확도 분석*\n`;
+            accuracyMessage += `• 10분후 예측 정확도\n`;
+            accuracyMessage += `• 예측: ${latestPrediction.predictedTrend}\n`;
+            accuracyMessage += `• 실제: ${actualTrend}\n`;
+            accuracyMessage += `• 가격 변동: ${priceChange.toFixed(2)}%\n`;
+            accuracyMessage += `• 결과: ${isCorrect ? '✅ 정확' : '❌ 부정확'}\n\n`;
+            
+            // 누적 통계 메시지 추가
+            accuracyMessage += `*누적 예측 통계*\n`;
+            accuracyMessage += `• 총 예측: ${accuracyStats.total}회\n`;
+            accuracyMessage += `• 정확: ${accuracyStats.correct}회\n`;
+            accuracyMessage += `• 부정확: ${accuracyStats.incorrect}회\n`;
+            accuracyMessage += `• 정확도: ${accuracyStats.accuracy}%\n`;
+            
+            // 텔레그램으로 정확도 메시지 전송
+            await bot.sendMessage(process.env.TELEGRAM_CHAT_ID, accuracyMessage, { parse_mode: 'Markdown' });
+            
+            // 예측 기록에서 처리된 예측 제거
+            predictionHistory.pop();
+        }
+
+        // 현재 예측 저장
+        const currentPrediction = {
+            timestamp: new Date(),
+            predictedTrend: actualTrend,
+            price: currentPrice
+        };
+        predictionHistory.push(currentPrediction);
+
+    } catch (error) {
+        console.error('예측 정확도 분석 중 에러 발생:', error.message);
+    }
+}
+
 // 가격 정보를 가져오고 알림을 보내는 함수
 async function checkPriceAndNotify() {
     try {
@@ -395,6 +478,10 @@ async function checkPriceAndNotify() {
 
         // 현재 추세 점수를 이전 추세 점수로 저장
         previousWeightedTrends = weightedTrends;
+
+        // 10분 후에 예측 정확도 분석 실행
+        setTimeout(analyzePredictionAccuracy, 10 * 60 * 1000);
+
     } catch (error) {
         console.error('에러 발생:', error.message);
     }
