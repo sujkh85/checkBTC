@@ -280,21 +280,25 @@ function determineTrend(indicators) {
 // 예측 정확도 분석 함수
 async function analyzePredictionAccuracy() {
     try {
-        // 5분봉 데이터 가져오기
-        const fiveMinData = await getPriceData({ name: '5분봉', interval: '5m', limit: 3 });
-        if (!fiveMinData || fiveMinData.length < 3) return;
+        console.log('예측 정확도 분석 시작...');
+        // 30분봉 데이터 가져오기
+        const thirtyMinData = await getPriceData({ name: '30분봉', interval: '30m', limit: 3 });
+        if (!thirtyMinData || thirtyMinData.length < 3) {
+            console.log('데이터가 부족하여 분석을 건너뜁니다.');
+            return;
+        }
 
-        const currentPrice = fiveMinData[fiveMinData.length - 1].close;
-        const tenMinutesAgoPrice = fiveMinData[0].close;
+        const currentPrice = thirtyMinData[thirtyMinData.length - 1].close;
+        const ninetyMinutesAgoPrice = thirtyMinData[0].close;
         
         // 가격 변동률 계산
-        const priceChange = ((currentPrice - tenMinutesAgoPrice) / tenMinutesAgoPrice) * 100;
+        const priceChange = ((currentPrice - ninetyMinutesAgoPrice) / ninetyMinutesAgoPrice) * 100;
         
-        // 실제 추세 판단
+        // 실제 추세 판단 (30분봉 기준으로 임계값 조정)
         let actualTrend;
-        if (priceChange > 0.5) {
+        if (priceChange > 0.5) {  // 30분봉 기준으로 임계값 상향 조정
             actualTrend = '상승';
-        } else if (priceChange < -0.5) {
+        } else if (priceChange < -0.5) {  // 30분봉 기준으로 임계값 상향 조정
             actualTrend = '하락';
         } else {
             actualTrend = '횡보';
@@ -315,8 +319,7 @@ async function analyzePredictionAccuracy() {
             accuracyStats.accuracy = (accuracyStats.correct / accuracyStats.total * 100).toFixed(2);
             
             // 정확도 메시지 생성
-            let accuracyMessage = `\n*예측 정확도 분석*\n`;
-            accuracyMessage += `• 10분후 예측 정확도\n`;
+            let accuracyMessage = `\n*예측 정확도 분석 (30분봉 기준)*\n`;
             accuracyMessage += `• 예측: ${latestPrediction.predictedTrend}\n`;
             accuracyMessage += `• 실제: ${actualTrend}\n`;
             accuracyMessage += `• 가격 변동: ${priceChange.toFixed(2)}%\n`;
@@ -479,9 +482,6 @@ async function checkPriceAndNotify() {
         // 현재 추세 점수를 이전 추세 점수로 저장
         previousWeightedTrends = weightedTrends;
 
-        // 10분 후에 예측 정확도 분석 실행
-        setTimeout(analyzePredictionAccuracy, 10 * 60 * 1000);
-
     } catch (error) {
         console.error('에러 발생:', error.message);
     }
@@ -506,7 +506,11 @@ setInterval(printStatus, 30000);
 console.log(`${SYMBOL} 모니터링 프로그램 시작`);
 checkPriceAndNotify();
 
-const time = 60000 * 5;
+const priceCheckInterval = 60000 * 5; // 5분
+const accuracyCheckInterval = 60000 * 30; // 30분
 
 // 5분마다 가격을 확인
-setInterval(checkPriceAndNotify, time);
+setInterval(checkPriceAndNotify, priceCheckInterval);
+
+// 30분마다 예측 정확도 분석 실행
+setInterval(analyzePredictionAccuracy, accuracyCheckInterval);
