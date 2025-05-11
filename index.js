@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import axios from 'axios';
 import {
   SMA,
   RSI,
@@ -19,6 +18,7 @@ import {
   sendAccuracyMessage,
   sendTrendAnalysisMessage
 } from './src/telegram.js';
+import { getPriceData } from './src/api/okx.js';
 import {
   TIME_FRAMES,
   MA_PERIODS,
@@ -27,7 +27,7 @@ import {
 } from './src/settings.js';
 
 // API 설정
-const { OKX_API_URL, SYMBOL } = API_SETTINGS;
+const { SYMBOL } = API_SETTINGS;
 
 // 이전 추세 점수를 저장할 변수
 let previousWeightedTrends = null;
@@ -45,31 +45,6 @@ let accuracyStats = {
 
 // 전역 변수로 예측 정보 저장
 let currentPrediction = null;
-
-// 가격 데이터를 가져오는 함수
-async function getPriceData(timeFrame) {
-  try {
-    console.log(`OKX에서 ${SYMBOL} ${timeFrame.name} 데이터 요청 중...`);
-    const response = await axios.get(
-      `${OKX_API_URL}/market/candles?instId=${SYMBOL}&bar=${timeFrame.interval}&limit=${timeFrame.limit}`
-    );
-    const prices = response.data.data.map((candle) => ({
-      timestamp: parseInt(candle[0]),
-      open: parseFloat(candle[1]),
-      high: parseFloat(candle[2]),
-      low: parseFloat(candle[3]),
-      close: parseFloat(candle[4]),
-      volume: parseFloat(candle[5])
-    }));
-    console.log(
-      `OKX에서 ${SYMBOL} ${timeFrame.name} 데이터 수신 완료 (${prices.length}개 캔들)`
-    );
-    return prices;
-  } catch (error) {
-    console.error(`${timeFrame.name} 데이터 가져오기 실패:`, error.message);
-    return null;
-  }
-}
 
 // 기술적 지표 계산 함수
 function calculateIndicators(prices) {
