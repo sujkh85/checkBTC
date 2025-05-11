@@ -2,69 +2,23 @@ require('dotenv').config();
 const axios = require('axios');
 const TelegramBot = require('node-telegram-bot-api');
 const { SMA, RSI, MACD, BollingerBands, Stochastic, OBV, ADX, EMA } = require('technicalindicators');
-const { analyzeHarmonicPattern } = require('./indicators/harmonic');
-const { analyzeIchimoku } = require('./indicators/ichimoku');
-const { analyzeElliottWave } = require('./indicators/elliott');
-const { analyzeSupportResistance } = require('./indicators/supportResistance');
-const { analyzeOverallTrend } = require('./indicators/trendAnalysis');
+const { analyzeHarmonicPattern } = require('./src/indicators/harmonic');
+const { analyzeIchimoku } = require('./src/indicators/ichimoku');
+const { analyzeElliottWave } = require('./src/indicators/elliott');
+const { analyzeSupportResistance } = require('./src/indicators/supportResistance');
+const { analyzeOverallTrend } = require('./src/indicators/trendAnalysis');
+const { 
+    TIME_FRAMES, 
+    MA_PERIODS, 
+    TECHNICAL_SETTINGS, 
+    API_SETTINGS 
+} = require('./src/settings');
 
 // 텔레그램 봇 설정
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
-// OKX API 엔드포인트
-const OKX_API_URL = 'https://www.okx.com/api/v5';
-const SYMBOL = 'BTC-USDT';
-
-// 지표 가중치 설정
-const INDICATOR_WEIGHTS = {
-    technical: 4,   // 기본 기술적 지표 가중치 증가
-    harmonic: 3,    // 하모닉 패턴 가중치 감소
-    ichimoku: 5,    // 일목구름표 가중치 증가
-    elliott: 4      // 엘리어트 파동 가중치 유지
-};
-
-// 시간대별 설정
-const TIME_FRAMES = [
-    { name: '1분봉', interval: '1m', limit: 200, weight: 1 },  // 낮은 가중치 - 참고용
-    { name: '5분봉', interval: '5m', limit: 200, weight: 2 },  // 중간 가중치 - 단기 방향성
-    { name: '30분봉', interval: '30m', limit: 200, weight: 4 },  // 가장 높은 가중치 - 스윙의 핵심
-    { name: '1시간봉', interval: '1H', limit: 200, weight: 3 },  // 높은 가중치 - 중기 추세
-    { name: '4시간봉', interval: '4H', limit: 200, weight: 2 },  // 중간 가중치 - 장기 추세
-    { name: '12시간봉', interval: '12H', limit: 200, weight: 2 },  // 중간 가중치 - 장기 추세
-    { name: '1일봉', interval: '1D', limit: 200, weight: 2 }  // 중간 가중치 - 장기 추세
-];
-
-// 이평선 기간 설정
-const MA_PERIODS = {
-    short: [10, 20, 50],    // 단기 이평선 기간 증가
-    medium: [100, 120, 200], // 중기 이평선 기간 증가
-    long: [200, 300]        // 장기 이평선 추가
-};
-
-// 기술적 지표 설정
-const rsiPeriod = 14;       // RSI 기간 유지
-const macdSettings = {
-    fastPeriod: 12,
-    slowPeriod: 26,
-    signalPeriod: 9,
-    SimpleMAOscillator: false,
-    SimpleMASignal: false
-};
-const bbSettings = {
-    period: 20,
-    stdDev: 2
-};
-const stochSettings = {
-    period: 14,
-    signalPeriod: 3
-};
-const adxSettings = {
-    period: 14
-};
-const maSettings = {
-    fastPeriod: 20,         // 단기 이평선 기간 증가
-    slowPeriod: 50          // 장기 이평선 기간 증가
-};
+// API 설정
+const { OKX_API_URL, SYMBOL } = API_SETTINGS;
 
 // 이전 추세 점수를 저장할 변수
 let previousWeightedTrends = null;
@@ -79,6 +33,9 @@ let accuracyStats = {
     incorrect: 0,
     accuracy: 0
 };
+
+// 전역 변수로 예측 정보 저장
+let currentPrediction = null;
 
 // 가격 데이터를 가져오는 함수
 async function getPriceData(timeFrame) {
@@ -135,19 +92,19 @@ function calculateIndicators(prices) {
     // RSI 계산
     const rsi = RSI.calculate({
         values: closes,
-        period: rsiPeriod
+        period: TECHNICAL_SETTINGS.rsi.period
     });
     
     // MACD 계산
     const macd = MACD.calculate({
         values: closes,
-        ...macdSettings
+        ...TECHNICAL_SETTINGS.macd
     });
     
     // 볼린저 밴드 계산
     const bb = BollingerBands.calculate({
         values: closes,
-        ...bbSettings
+        ...TECHNICAL_SETTINGS.bb
     });
 
     // 스토캐스틱 계산
@@ -155,8 +112,7 @@ function calculateIndicators(prices) {
         high: highs,
         low: lows,
         close: closes,
-        period: stochSettings.period,
-        signalPeriod: stochSettings.signalPeriod
+        ...TECHNICAL_SETTINGS.stoch
     });
 
     // OBV 계산
@@ -170,17 +126,17 @@ function calculateIndicators(prices) {
         high: highs,
         low: lows,
         close: closes,
-        period: adxSettings.period
+        period: TECHNICAL_SETTINGS.adx.period
     });
 
     // 이평선 크로스 계산
     const fastMA = SMA.calculate({
         values: closes,
-        period: maSettings.fastPeriod
+        period: TECHNICAL_SETTINGS.ma.fastPeriod
     });
     const slowMA = SMA.calculate({
         values: closes,
-        period: maSettings.slowPeriod
+        period: TECHNICAL_SETTINGS.ma.slowPeriod
     });
     
     return {
@@ -296,18 +252,17 @@ async function analyzePredictionAccuracy() {
         
         // 실제 추세 판단 (30분봉 기준으로 임계값 조정)
         let actualTrend;
-        if (priceChange > 0.5) {  // 30분봉 기준으로 임계값 상향 조정
+        if (priceChange > 0.5) {
             actualTrend = '상승';
-        } else if (priceChange < -0.5) {  // 30분봉 기준으로 임계값 상향 조정
+        } else if (priceChange < -0.5) {
             actualTrend = '하락';
         } else {
             actualTrend = '횡보';
         }
 
-        // 예측 기록이 있으면 정확도 분석
-        if (predictionHistory.length > 0) {
-            const latestPrediction = predictionHistory[predictionHistory.length - 1];
-            const isCorrect = latestPrediction.predictedTrend === actualTrend;
+        // 예측 정보가 있으면 정확도 분석
+        if (currentPrediction) {
+            const isCorrect = currentPrediction.predictedTrend === actualTrend;
             
             // 누적 통계 업데이트
             accuracyStats.total++;
@@ -320,7 +275,7 @@ async function analyzePredictionAccuracy() {
             
             // 정확도 메시지 생성
             let accuracyMessage = `\n*예측 정확도 분석 (30분봉 기준)*\n`;
-            accuracyMessage += `• 예측: ${latestPrediction.predictedTrend}\n`;
+            accuracyMessage += `• 예측: ${currentPrediction.predictedTrend}\n`;
             accuracyMessage += `• 실제: ${actualTrend}\n`;
             accuracyMessage += `• 가격 변동: ${priceChange.toFixed(2)}%\n`;
             accuracyMessage += `• 결과: ${isCorrect ? '✅ 정확' : '❌ 부정확'}\n\n`;
@@ -335,17 +290,9 @@ async function analyzePredictionAccuracy() {
             // 텔레그램으로 정확도 메시지 전송
             await bot.sendMessage(process.env.TELEGRAM_CHAT_ID, accuracyMessage, { parse_mode: 'Markdown' });
             
-            // 예측 기록에서 처리된 예측 제거
-            predictionHistory.pop();
+            // 현재 예측 정보 초기화
+            currentPrediction = null;
         }
-
-        // 현재 예측 저장
-        const currentPrediction = {
-            timestamp: new Date(),
-            predictedTrend: actualTrend,
-            price: currentPrice
-        };
-        predictionHistory.push(currentPrediction);
 
     } catch (error) {
         console.error('예측 정확도 분석 중 에러 발생:', error.message);
@@ -357,13 +304,18 @@ async function checkPriceAndNotify() {
     try {
         const timeFrameTrends = {};
         let message = `*${SYMBOL} 추세 분석*(스윙 전략)\n\n`;
+        let currentPrice = null;
 
         // 각 시간대별로 분석
         for (const timeFrame of TIME_FRAMES) {
             const prices = await getPriceData(timeFrame);
             if (!prices || prices.length === 0) continue;
 
-            const currentPrice = prices[prices.length - 1].close;
+            // 현재 가격 저장 (30분봉 기준)
+            if (timeFrame.interval === '30m') {
+                currentPrice = prices[prices.length - 1].close;
+            }
+
             const indicators = calculateIndicators(prices);
             
             // 하모닉 패턴 분석
@@ -461,6 +413,13 @@ async function checkPriceAndNotify() {
         const dominantTrend = Object.entries(weightedTrends)
             .find(([_, score]) => score === maxWeightedScore)[0];
         
+        // 현재 예측 정보 저장
+        currentPrediction = {
+            timestamp: new Date(),
+            predictedTrend: dominantTrend,
+            price: currentPrice
+        };
+
         // 추세에 따른 이모지 선택
         let overallEmoji = '';
         if (dominantTrend === '상승') overallEmoji = '📈';
