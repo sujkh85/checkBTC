@@ -68,7 +68,7 @@ const TREND_WEIGHTS = {
     }
 };
 
-module.exports = {
+export {
     TIME_FRAMES,
     MA_PERIODS,
     TECHNICAL_SETTINGS,

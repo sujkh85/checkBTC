@@ -1,4 +1,4 @@
-const { TREND_WEIGHTS } = require('../settings');
+import { TREND_WEIGHTS } from '../settings.js';
 
 // 종합 추세 분석 함수
 function analyzeOverallTrend(indicators, harmonic, ichimoku, elliott, supportResistance, prices, timeframe) {
@@ -305,6 +305,6 @@ function analyzeFibonacciRatios(prices) {
     };
 }
 
-module.exports = {
+export {
     analyzeOverallTrend
 }; 

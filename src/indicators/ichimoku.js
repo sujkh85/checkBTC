@@ -1,4 +1,4 @@
-const { analyzeIchimokuSignals } = require('./ichimokuSignals');
+import { analyzeIchimokuSignals } from './ichimokuSignals.js';
 
 // 전환선 계산
 function calculateConversionLine(highs, lows) {
@@ -77,6 +77,4 @@ function analyzeIchimoku(prices) {
     };
 }
 
-module.exports = {
-    analyzeIchimoku
-}; 
+export { analyzeIchimoku }; 

@@ -191,8 +191,7 @@ function checkSharkPattern(data) {
     return 'Shark 패턴 없음';
 }
 
-// 하모닉 패턴 분석 함수
-function analyzeHarmonicPattern(prices) {
+export function analyzeHarmonicPattern(prices) {
     const highs = prices.map(p => p.high);
     const lows = prices.map(p => p.low);
     
@@ -216,8 +215,4 @@ function analyzeHarmonicPattern(prices) {
         crab,
         shark
     };
-}
-
-module.exports = {
-    analyzeHarmonicPattern
-}; 
+} 

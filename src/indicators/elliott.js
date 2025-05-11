@@ -119,8 +119,9 @@ function analyzeCurrentWave(waves) {
     return analysis;
 }
 
-// 엘리어트 파동 분석 함수
-function analyzeElliottWave(prices) {
+
+
+export function analyzeElliottWave(prices) {
     const closes = prices.map(p => p.close);
     
     // 파동 식별
@@ -137,8 +138,4 @@ function analyzeElliottWave(prices) {
         pattern,
         currentWave
     };
-}
-
-module.exports = {
-    analyzeElliottWave
-}; 
+} 

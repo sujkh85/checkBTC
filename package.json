@@ -1,16 +1,20 @@
 {
-  "name": "okx-bts-monitor",
+  "name": "checkbtc",
   "version": "1.0.0",
-  "description": "OKX BTS/USDT 모니터링 및 텔레그램 알림 시스템",
+  "type": "module",
+  "description": "BTC price monitoring and trend analysis",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js"
   },
   "dependencies": {
-    "axios": "^1.6.2",
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
     "node-telegram-bot-api": "^0.64.0",
-    "dotenv": "^16.3.1",
     "technicalindicators": "^3.1.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
   }
-} 
+}

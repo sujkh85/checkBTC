@@ -1,18 +1,18 @@
-require('dotenv').config();
-const axios = require('axios');
-const TelegramBot = require('node-telegram-bot-api');
-const { SMA, RSI, MACD, BollingerBands, Stochastic, OBV, ADX, EMA } = require('technicalindicators');
-const { analyzeHarmonicPattern } = require('./src/indicators/harmonic');
-const { analyzeIchimoku } = require('./src/indicators/ichimoku');
-const { analyzeElliottWave } = require('./src/indicators/elliott');
-const { analyzeSupportResistance } = require('./src/indicators/supportResistance');
-const { analyzeOverallTrend } = require('./src/indicators/trendAnalysis');
-const { 
+import 'dotenv/config';
+import axios from 'axios';
+import TelegramBot from 'node-telegram-bot-api';
+import { SMA, RSI, MACD, BollingerBands, Stochastic, OBV, ADX, EMA } from 'technicalindicators';
+import { analyzeHarmonicPattern } from './src/indicators/harmonic.js';
+import { analyzeIchimoku } from './src/indicators/ichimoku.js';
+import { analyzeElliottWave } from './src/indicators/elliott.js';
+import { analyzeSupportResistance } from './src/indicators/supportResistance.js';
+import { analyzeOverallTrend } from './src/indicators/trendAnalysis.js';
+import { 
     TIME_FRAMES, 
     MA_PERIODS, 
     TECHNICAL_SETTINGS, 
     API_SETTINGS 
-} = require('./src/settings');
+} from './src/settings.js';
 
 // 텔레그램 봇 설정
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
@@ -166,71 +166,6 @@ function calculateMA(data, period) {
         result.push(sum / period);
     }
     return result;
-}
-
-// 추세 판단 함수
-function determineTrend(indicators) {
-    const { rsi, macd, bb, stoch, obv, adx, maCross } = indicators;
-    
-    // RSI 기반 판단 (스윙에 맞게 민감도 감소)
-    const rsiTrend = rsi > 60 ? '상승' : rsi < 40 ? '하락' : '횡보';
-    
-    // MACD 기반 판단 (중기 추세 강조)
-    const macdDiff = Math.abs(macd.MACD - macd.signal);
-    const macdTrend = macdDiff < 0.1 ? '횡보' : 
-                     (macd.MACD > macd.signal ? '상승' : '하락');
-    
-    // 볼린저 밴드 기반 판단 (중기 변동성 강조)
-    const bbWidth = (bb.upper - bb.lower) / bb.middle;
-    const currentPrice = bb.middle;
-    const bbTrend = bbWidth < 0.02 ? '횡보' : 
-                   (currentPrice > bb.upper ? '상승' : 
-                   (currentPrice < bb.lower ? '하락' : '횡보'));
-
-    // 스토캐스틱 기반 판단 (중기 변동성 강조)
-    const stochTrend = stoch.k > 80 ? '상승' : stoch.k < 20 ? '하락' : '횡보';
-
-    // OBV 기반 판단 (중기 거래량 강조)
-    const obvTrend = obv > 0 ? '상승' : '하락';
-
-    // ADX 기반 판단 (중기 추세 강도 강조)
-    const adxTrend = adx > 25 ? 
-                    (macd.MACD > macd.signal ? '상승' : '하락') : 
-                    '횡보';
-
-    // 이평선 크로스 기반 판단 (중기 변동성 강조)
-    const maDiff = Math.abs(maCross.fast - maCross.slow);
-    const maCrossTrend = maDiff < maCross.slow * 0.02 ? '횡보' : 
-                        (maCross.fast > maCross.slow ? '상승' : '하락');
-    
-    // 종합 판단 (중기 지표에 더 높은 가중치)
-    const trends = [
-        rsiTrend,           // 1배 가중치
-        macdTrend,          // 2배 가중치
-        bbTrend,            // 1.5배 가중치
-        stochTrend,         // 1배 가중치
-        obvTrend,           // 1.5배 가중치
-        adxTrend,           // 2배 가중치
-        maCrossTrend        // 2배 가중치
-    ];
-    
-    // 가중치 적용
-    const weightedTrends = {
-        '상승': 0,
-        '하락': 0,
-        '횡보': 0
-    };
-    
-    // 가중치 적용
-    trends.forEach((trend, index) => {
-        const weight = index === 1 || index === 5 || index === 6 ? 2 : 
-                      index === 2 || index === 4 ? 1.5 : 1;
-        weightedTrends[trend] += weight;
-    });
-    
-    // 가장 높은 가중치를 가진 추세 반환
-    return Object.entries(weightedTrends)
-        .sort((a, b) => b[1] - a[1])[0][0];
 }
 
 // 예측 정확도 분석 함수

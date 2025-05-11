@@ -1,5 +1,29 @@
-// 일목구름표 매매 신호 분석
-function analyzeIchimokuSignals(currentPrice, conversionLine, baseLine, leadingSpanA, leadingSpanB, laggingSpan) {
+// 추세 판단
+function determineTrend(signals, strongSignals) {
+    const bullishSignals = signals.filter(s => 
+        s.includes('상향돌파') || 
+        s.includes('위에 위치')
+    ).length;
+
+    const bearishSignals = signals.filter(s => 
+        s.includes('하향돌파') || 
+        s.includes('아래에 위치')
+    ).length;
+
+    if (strongSignals.includes('강력한 상승 신호')) {
+        return '강력한 상승 추세';
+    } else if (strongSignals.includes('강력한 하락 신호')) {
+        return '강력한 하락 추세';
+    } else if (bullishSignals > bearishSignals) {
+        return '상승 추세';
+    } else if (bearishSignals > bullishSignals) {
+        return '하락 추세';
+    } else {
+        return '횡보 추세';
+    }
+}
+
+export function analyzeIchimokuSignals(currentPrice, conversionLine, baseLine, leadingSpanA, leadingSpanB, laggingSpan) {
     const signals = [];
     
     // 전환선과 기준선 크로스
@@ -46,32 +70,3 @@ function analyzeIchimokuSignals(currentPrice, conversionLine, baseLine, leadingS
         trend: determineTrend(signals, strongSignals)
     };
 }
-
-// 추세 판단
-function determineTrend(signals, strongSignals) {
-    const bullishSignals = signals.filter(s => 
-        s.includes('상향돌파') || 
-        s.includes('위에 위치')
-    ).length;
-
-    const bearishSignals = signals.filter(s => 
-        s.includes('하향돌파') || 
-        s.includes('아래에 위치')
-    ).length;
-
-    if (strongSignals.includes('강력한 상승 신호')) {
-        return '강력한 상승 추세';
-    } else if (strongSignals.includes('강력한 하락 신호')) {
-        return '강력한 하락 추세';
-    } else if (bullishSignals > bearishSignals) {
-        return '상승 추세';
-    } else if (bearishSignals > bullishSignals) {
-        return '하락 추세';
-    } else {
-        return '횡보 추세';
-    }
-}
-
-module.exports = {
-    analyzeIchimokuSignals
-}; 

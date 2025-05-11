@@ -71,8 +71,8 @@ function analyzeBreakout(currentPrice, supportLevels, resistanceLevels) {
     return result;
 }
 
-// 지지선과 저항선 분석 함수
-function analyzeSupportResistance(prices) {
+
+export function analyzeSupportResistance(prices) {
     const closes = prices.map(p => p.close);
     const highs = prices.map(p => p.high);
     const lows = prices.map(p => p.low);
@@ -100,8 +100,4 @@ function analyzeSupportResistance(prices) {
         resistanceLevels,
         analysis
     };
-}
-
-module.exports = {
-    analyzeSupportResistance
-}; 
+} 
