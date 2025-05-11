@@ -89,9 +89,10 @@ export async function checkPriceAndNotify() {
     }
 
     // 이전 추세와 비교
+    let isAllScoresEqual = false;
     if (previousWeightedTrends) {
       // 모든 점수가 동일한지 확인
-      const isAllScoresEqual =
+      isAllScoresEqual =
         previousWeightedTrends['상승'] === weightedTrends['상승'] &&
         previousWeightedTrends['하락'] === weightedTrends['하락'] &&
         previousWeightedTrends['횡보'] === weightedTrends['횡보'];
