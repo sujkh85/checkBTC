@@ -97,9 +97,9 @@ export async function checkPriceAndNotify() {
         previousWeightedTrends['횡보'] === weightedTrends['횡보'];
 
       if (isAllScoresEqual) {
-        console.log('모든 추세 점수가 동일하여 메시지를 보내지 않습니다.');
-        previousWeightedTrends = weightedTrends;
-        return;
+        console.log(
+          '모든 추세 점수가 동일하여 추세 분석 메시지를 보내지 않습니다.'
+        );
       }
     }
 
@@ -113,7 +113,7 @@ export async function checkPriceAndNotify() {
       ([_, score]) => score === maxWeightedScore
     )[0];
 
-    // 현재 예측 정보 저장
+    // 현재 예측 정보 저장 (추세가 변경되지 않아도 저장)
     console.log('예측 정보 저장 시작:', {
       timestamp: new Date(),
       predictedTrend: dominantTrend,
@@ -126,18 +126,21 @@ export async function checkPriceAndNotify() {
     });
     console.log('예측 정보 저장 완료');
 
-    // 텔레그램으로 추세 분석 메시지 전송
-    await sendTrendAnalysisMessage({
-      symbol: SYMBOL,
-      timeFrameTrends,
-      weightedTrends,
-      dominantTrend,
-      currentPrice,
-      indicators: currentIndicators,
-      harmonic: currentHarmonic,
-      ichimoku: currentIchimoku,
-      elliott: currentElliott
-    });
+    // 추세가 변경된 경우에만 추세 분석 메시지 전송
+    if (!previousWeightedTrends || !isAllScoresEqual) {
+      // 텔레그램으로 추세 분석 메시지 전송
+      await sendTrendAnalysisMessage({
+        symbol: SYMBOL,
+        timeFrameTrends,
+        weightedTrends,
+        dominantTrend,
+        currentPrice,
+        indicators: currentIndicators,
+        harmonic: currentHarmonic,
+        ichimoku: currentIchimoku,
+        elliott: currentElliott
+      });
+    }
 
     // 현재 추세 점수를 이전 추세 점수로 저장
     previousWeightedTrends = weightedTrends;
