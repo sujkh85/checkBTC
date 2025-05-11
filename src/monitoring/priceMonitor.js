@@ -31,8 +31,8 @@ export async function checkPriceAndNotify() {
       const prices = await getPriceData(timeFrame);
       if (!prices || prices.length === 0) continue;
 
-      // 현재 가격 저장 (30분봉 기준)
-      if (timeFrame.interval === '30m') {
+      // 현재 가격 저장 (5분봉 기준)
+      if (timeFrame.interval === '5m') {
         currentPrice = prices[prices.length - 1].close;
       }
 
@@ -61,8 +61,8 @@ export async function checkPriceAndNotify() {
         timeFrame.interval
       );
 
-      // 현재 분석 결과 저장 (30분봉 기준)
-      if (timeFrame.interval === '30m') {
+      // 현재 분석 결과 저장 (5분봉 기준)
+      if (timeFrame.interval === '5m') {
         currentIndicators = indicators;
         currentHarmonic = harmonic;
         currentIchimoku = ichimoku;
@@ -114,11 +114,17 @@ export async function checkPriceAndNotify() {
     )[0];
 
     // 현재 예측 정보 저장
+    console.log('예측 정보 저장 시작:', {
+      timestamp: new Date(),
+      predictedTrend: dominantTrend,
+      price: currentPrice
+    });
     setCurrentPrediction({
       timestamp: new Date(),
       predictedTrend: dominantTrend,
       price: currentPrice
     });
+    console.log('예측 정보 저장 완료');
 
     // 텔레그램으로 추세 분석 메시지 전송
     await sendTrendAnalysisMessage({

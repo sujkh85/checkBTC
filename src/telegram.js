@@ -11,7 +11,7 @@ export async function sendAccuracyMessage({
   priceChange
 }) {
   // 정확도 메시지 생성
-  let accuracyMessage = `\n*예측 정확도 분석 (30분봉 기준)*\n`;
+  let accuracyMessage = `\n*예측 정확도 분석 (5분봉 기준)*\n`;
   accuracyMessage += `• 예측: ${currentPrediction.predictedTrend}\n`;
   accuracyMessage += `• 실제: ${actualTrend}\n`;
   accuracyMessage += `• 가격 변동: ${priceChange.toFixed(2)}%\n`;
@@ -23,6 +23,8 @@ export async function sendAccuracyMessage({
   accuracyMessage += `• 정확: ${accuracyStats.correct}회\n`;
   accuracyMessage += `• 부정확: ${accuracyStats.incorrect}회\n`;
   accuracyMessage += `• 정확도: ${accuracyStats.accuracy}%\n`;
+
+  console.log(accuracyMessage);
 
   await bot.sendMessage(process.env.TELEGRAM_CHAT_ID, accuracyMessage, {
     parse_mode: 'Markdown'
